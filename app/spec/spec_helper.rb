@@ -32,7 +32,6 @@ module SpecHelper
     @mock_request ||= Rack::MockRequest.new(app)
   end
 
-  # Helper para obtener un token válido
   def get_auth_token(username: ENV['USERNAME'], password: ENV['PASSWORD'])
     response = mock_request.post(
       '/auth',
@@ -42,12 +41,10 @@ module SpecHelper
     JSON.parse(response.body)['token']
   end
 
-  # Helper para hacer requests autenticados
   def auth_header(token)
     { 'HTTP_AUTHORIZATION' => "Bearer #{token}" }
   end
 
-  # Limpiar TOKENS entre tests
   def clear_tokens!
     TOKENS.clear
   end

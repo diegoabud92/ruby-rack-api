@@ -5,8 +5,6 @@ require_relative './base_controller'
 # Controller for handling product-related HTTP requests.
 # Create and read operations for products through RESTful endpoints.
 class ProductsController < BaseController
-  # TODO: Rack::Deflater to compress the response
-
   # GET /products
   #
   def index(tokens)
