@@ -1,0 +1,1 @@
+Fudo es un sistema de gestión integral gastronómico flexible y en linea que funciona en cualquier dispositivo. Pensado para restaurantes, bares y cafés. La plataforma se encarga de la gestión de ventas y pedidos, permitiendo recibir órdenes a través de una tienda online, menús con código QR e integraciones con servicios como PedidosYa, Rappi y Mercado Pago.

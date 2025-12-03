@@ -1,0 +1,1 @@
+El protocolo de control de transmisión (TCP) es un estándar de comunicación que permite que los programas de aplicaciones y los dispositivos informáticos intercambien mensajes a través de una red. Es uno de los protocolos más comúnmente utilizados y garantiza la entrega de datos de extremo a extremo.
