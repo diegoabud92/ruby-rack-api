@@ -2,5 +2,6 @@
 
 require './application'
 
+use Rack::Deflater
 use Rack::Reloader, 0
 run Cuba

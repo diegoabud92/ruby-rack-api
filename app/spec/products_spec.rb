@@ -105,4 +105,31 @@ RSpec.describe 'Products API' do
       end
     end
   end
+
+  describe 'gzip compression' do
+    context 'when client requests gzip encoding' do
+      it 'returns gzip compressed response' do
+        token = get_auth_token
+        response = mock_request.get(
+          '/products',
+          'HTTP_ACCEPT_ENCODING' => 'gzip, deflate',
+          **auth_header(token)
+        )
+
+        expect(response.status).to eq(200)
+        expect(response['Content-Encoding']).to eq('gzip')
+        expect(response['Vary']).to eq('Accept-Encoding')
+      end
+    end
+
+    context 'when client does not request gzip encoding' do
+      it 'returns uncompressed response' do
+        token = get_auth_token
+        response = mock_request.get('/products', auth_header(token))
+
+        expect(response.status).to eq(200)
+        expect(response['Content-Encoding']).to be_nil
+      end
+    end
+  end
 end

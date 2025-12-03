@@ -1,0 +1,249 @@
+openapi: 3.0.3
+info:
+  title: Ruby Rack API
+  description: API REST para gestión de productos usando Ruby, Rack y Cuba
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:9292
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Token JWT obtained from /auth endpoint
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: "Pizza Napolitana"
+
+    AuthRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "admin"
+        password:
+          type: string
+          example: "password"
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Pizza Napolitana"
+
+    CreateProductResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Producto creado asincronamente, para obtener el producto use el endpoint GET /products/last"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+
+paths:
+  /auth:
+    post:
+      summary: Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /products:
+    get:
+      summary: Products list
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '401':
+          description: No autorizado
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Unauthorized"
+
+    post:
+      summary: Create product (asynchronous)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProductResponse'
+        '400':
+          description: Product name is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Unauthorized"
+
+  /products/last:
+    get:
+      summary: Last product (asynchronous)
+      description: Get the last product created (asynchronous)
+      tags:
+        - Productos
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Last product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: No products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      description: Get a specific product by ID
+      tags:
+        - Productos
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Producto no encontrado"
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Unauthorized"
+
+  /AUTHORS:
+    get:
+      summary: Author
+      responses:
+        '200':
+          description: AUTHORS File
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "public, max-age=86400"
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Diego Abud"
+
+  /openapi.yaml:
+    get:
+      summary: OpenAPI Specification
+      responses:
+        '200':
+          description: OpenAPI Specification in YAML format
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-store"
+          content:
+            text/yaml:
+              schema:
+                type: string

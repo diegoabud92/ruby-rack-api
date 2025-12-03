@@ -22,7 +22,10 @@ end
 # Helper module para los tests
 module SpecHelper
   def app
-    Cuba
+    Rack::Builder.new do
+      use Rack::Deflater
+      run Cuba
+    end
   end
 
   def mock_request
