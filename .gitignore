@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# Database
+db.pstore
+
+# Ruby
+*.gem
+*.rbc
+.bundle
+vendor/bundle
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
