@@ -140,3 +140,7 @@ La especificación OpenAPI está disponible en `/openapi.yaml`
 - [Cuba](https://www.rubydoc.info/gems/cuba)
 - [Rack-test](https://github.com/rack/rack-test)
 - [Rack::Deflater](https://thoughtbot.com/blog/content-compression-with-rack-deflater)
+
+## Links y documentación usada
+
+Formas de seguir mejorando la API: Yo utilice pstore para el almacenamiento de los productos, una forma mas sencilla ya que se permitia almacenamiento en memoria podria haber sido con arrays o hashes (pero se habria perdido la persistencia). Otra cosa, la creacion asincronica de productos es muy simple, si esto se quisiera llevar a un desarrollo mas complejo se podria usar sidekiq, pero me parecio una consigna muy simple como para implementar sidekiq.
