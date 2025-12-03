@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "9292:9292"
+    environment:
+      - USERNAME=admin
+      - PASSWORD=fudo
+    volumes:
+      - ./db.pstore:/app/db.pstore
