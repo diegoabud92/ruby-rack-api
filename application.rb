@@ -80,5 +80,12 @@ Cuba.define do
     end
   end
 
+  # 404 Not Found - si ninguna ruta matcheó
+  on default do
+    res.status = 404
+    res.headers['Content-Type'] = 'application/json'
+    res.write JSON.generate({ error: 'Not Found' })
+  end
+
   # TODO: Implement put and delete routes for products
 end
