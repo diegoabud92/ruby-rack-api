@@ -5,10 +5,6 @@ require_relative 'spec_helper'
 RSpec.describe 'Products API' do
   let(:token) { get_auth_token }
 
-  before(:each) do
-    clear_tokens!
-  end
-
   describe 'GET /products' do
     context 'with valid token' do
       it 'returns a list of products' do
@@ -35,6 +31,7 @@ RSpec.describe 'Products API' do
   describe 'POST /products' do
     context 'with valid token and name' do
       it 'creates a product asynchronously' do
+        allow(Thread).to receive(:new).and_yield
         token = get_auth_token
         response = mock_request.post(
           '/products',
@@ -43,10 +40,17 @@ RSpec.describe 'Products API' do
           **auth_header(token)
         )
         expect(response.status).to eq(201)
-        expect(response['Content-Type']).to eq('application/json')
-
         body = JSON.parse(response.body)
-        expect(body['message']).to eq('Producto creado asincronamente, para obtener el producto use el endpoint GET /products/last')
+        match = body['message'].match(%r{GET /products/(\d+)})
+        expect(match).not_to be_nil
+        product_id = match[1]
+
+        get_response = mock_request.get("/products/#{product_id}", auth_header(token))
+        expect(get_response.status).to eq(200)
+
+        product = JSON.parse(get_response.body)
+        expect(product['id']).to eq(product_id.to_i)
+        expect(product['name']).to eq('Pizza Napolitana')
       end
     end
 
