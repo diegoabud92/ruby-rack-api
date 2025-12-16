@@ -3,17 +3,19 @@
 require 'cuba'
 require 'dotenv/load'
 require 'json'
-require 'securerandom'
+require 'jwt'
+require 'pry-byebug'
+require 'sidekiq'
 
 # Load models and controllers
+require './app/jobs/create_product_job'
+require './app/lib/jwt_auth'
 require './app/models/base'
 require './app/models/products'
+require './app/models/users'
 require './app/controllers/base_controller'
 require './app/controllers/products_controller'
-
-# rubocop:disable Style/MutableConstant
-TOKENS = {}
-# rubocop:enable Style/MutableConstant
+require './app/controllers/users_controller'
 
 # Routes definition for the API using Cuba
 Cuba.define do
@@ -31,11 +33,15 @@ Cuba.define do
     on post do
       req.body.rewind
       datos = JSON.parse(req.body.read)
-      if datos['username'] == ENV['USERNAME'] && datos['password'] == ENV['PASSWORD']
-        token = SecureRandom.uuid
-        TOKENS[token] = Time.now
+      if !datos['username'] || !datos['password']
+        res.status = 400
         res.headers['Content-Type'] = 'application/json'
-        res.write JSON.generate({ token: token })
+        res.write JSON.generate({ error: 'Bad Request' })
+      elsif (user = User.find_by_username(datos['username'])) &&
+            BCrypt::Password.new(user.password) == datos['password']
+        jwt_token = JwtAuth.encode({ user_id: user.id, username: user.username })
+        res.headers['Content-Type'] = 'application/json'
+        res.write JSON.generate({ token: jwt_token })
       else
         res.status = 401
         res.headers['Content-Type'] = 'application/json'
@@ -55,29 +61,39 @@ Cuba.define do
 
   # Products routes
   on 'products' do
-    # GET /products/last
-    on get, 'last' do
-      controller = ProductsController.new(req, res)
-      controller.last(TOKENS)
-    end
-
     # GET /products/:id
     on get, ':id' do |id|
       controller = ProductsController.new(req, res)
-      controller.show(TOKENS, id: id)
+      controller.show(id: id)
     end
 
     # POST /products
     on post, root do
       controller = ProductsController.new(req, res)
-      controller.create(TOKENS)
+      controller.create
     end
 
     # GET /products
     on get, root do
       controller = ProductsController.new(req, res)
-      controller.index(TOKENS)
+      controller.index
     end
+  end
+
+  # Users routes
+  on 'users' do
+    # POST /users
+    on post, root do
+      controller = UsersController.new(req, res)
+      controller.create
+    end
+  end
+
+  # 404 Not Found - si ninguna ruta matcheó
+  on default do
+    res.status = 404
+    res.headers['Content-Type'] = 'application/json'
+    res.write JSON.generate({ error: 'Not Found' })
   end
 
   # TODO: Implement put and delete routes for products

@@ -1,11 +1,12 @@
 # Ruby Rack API
 
-API REST simple para gestión de productos usando Ruby, Rack y Cuba.
+API REST simple para gestión de productos usando Ruby, Rack y Cuba con autenticación JWT y procesamiento asíncrono con Sidekiq.
 
 ## Requisitos
 
 - Ruby 3.4
 - Bundler
+- Redis (para Sidekiq)
 
 ## Instalación
 
@@ -15,12 +16,39 @@ bundle install
 
 ## Ejecutar
 
+Se necesitan **2 procesos**: el servidor web y el worker de Sidekiq.
+
+### Terminal 1: Redis
+
+```bash
+# macOS
+brew services start redis
+
+# O con Docker
+docker run -d -p 6379:6379 redis
+```
+
+### Terminal 2: Servidor Web
+
 ```bash
 # Copiar variables de entorno
 cp .env.example .env
 
 # Iniciar servidor
 bundle exec rackup
+```
+
+### Terminal 3: Sidekiq Worker
+
+```bash
+bundle exec sidekiq -r ./application.rb
+```
+
+## Variables de Entorno
+
+```bash
+JWT_SECRET=clave_secreta_para_jwt
+REDIS_URL=redis://localhost:6379/0
 ```
 
 ## Docker
@@ -31,25 +59,45 @@ docker-compose up --build
 
 ## Endpoints
 
-- `POST /auth` - Obtener token
-- `GET /products` - Listar productos (usa auth)
-- `POST /products` - Crear producto (usa auth)
-- `GET /products/:id` - Obtener producto (usa auth)
-- `GET /products/last` - Último producto (usa auth)
+### Autenticación
+- `POST /users` - Crear usuario
+- `POST /auth` - Obtener token JWT
+
+### Productos (requieren autenticación)
+- `GET /products` - Listar productos
+- `POST /products` - Crear producto (asíncrono con Sidekiq)
+- `GET /products/:id` - Obtener producto por ID
+
+### Otros
+- `GET /AUTHORS` - Información del autor
+- `GET /openapi.yaml` - Especificación OpenAPI
 
 ## Ejemplos
+
+### Crear usuario
+
+```bash
+curl -X POST http://localhost:9292/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+```
+
+**Respuesta exitosa (201):**
+```json
+{"message":"User created","user":{"id":1,"username":"admin"}}
+```
 
 ### Autenticación
 
 ```bash
 curl -X POST http://localhost:9292/auth \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"fudo"}'
+  -d '{"username":"admin","password":"password"}'
 ```
 
 **Respuesta exitosa (200):**
 ```json
-{"token":"bf5c7686-9124-4b6c-aa61-d0a5a57478f3"}
+{"token":"eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIn0.abc123"}
 ```
 
 **Respuesta error (401):**
@@ -66,7 +114,7 @@ curl http://localhost:9292/products \
 
 **Respuesta:**
 ```json
-[{"id":1,"name":"Pizza Napolitana"},{"id":2,"name":"Lasagna"}]
+[{"id":1,"name":"Pizza Napolitana","user_id":1},{"id":2,"name":"Lasagna","user_id":1}]
 ```
 
 ### Crear producto
@@ -78,36 +126,24 @@ curl -X POST http://localhost:9292/products \
   -d '{"name":"Pizza Napolitana"}'
 ```
 
-**Respuesta (201):** La creación es asíncrona (tarda 5 segundos)
+**Respuesta (201):** La creación es asíncrona (procesada por Sidekiq con delay de 5 segundos)
 ```json
-{"message":"Producto creado asincronamente, para obtener el producto use el endpoint GET /products/last"}
-```
-
-### Ver ultimo producto creado
-
-```bash
-curl http://localhost:9292/products/last \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-**Respuesta:**
-```json
-{"id":3,"name":"Lasagna"}
+{"message":"Producto creado asincronamente, para visualizar el producto use el endpoint GET /products/1"}
 ```
 
 ### Buscar producto por ID
 
 ```bash
-curl http://localhost:9292/products/3 \
+curl http://localhost:9292/products/1 \
   -H "Authorization: Bearer <TOKEN>"
 ```
 
 **Respuesta:**
 ```json
-{"id":3,"name":"Lasagna"}
+{"id":1,"name":"Pizza Napolitana","user_id":1}
 ```
 
-### Compresion gzip
+### Compresión gzip
 
 La API soporta compresión gzip cuando el cliente lo solicita:
 
@@ -128,6 +164,51 @@ Vary: Accept-Encoding
 bundle exec rspec app/spec/
 ```
 
+## Arquitectura
+
+```
+app/
+├── config/
+│   └── sidekiq.rb            # Configuración de Sidekiq
+├── controllers/
+│   ├── base_controller.rb    # Autenticación JWT
+│   ├── products_controller.rb
+│   └── users_controller.rb
+├── jobs/
+│   └── create_product_job.rb # Job asíncrono para crear productos
+├── models/
+│   ├── base.rb               # Almacenamiento en PStore
+│   ├── products.rb
+│   └── users.rb
+├── lib/
+│   └── jwt_auth.rb           # JWT encode/decode
+└── spec/
+    ├── auth_spec.rb
+    ├── products_spec.rb
+    └── spec_helper.rb
+```
+
+## Procesamiento Asíncrono
+
+La creación de productos se procesa de forma asíncrona usando **Sidekiq**:
+
+1. El cliente envía `POST /products`
+2. El servidor responde inmediatamente con `201` y el ID asignado
+3. Sidekiq procesa el job en background (con delay de 5 segundos)
+4. El producto se puede ver en el mensaje que sale post create, en `GET /products/:id`
+
+**Beneficios de Sidekiq sobre Thread.new:(implementacion previa)**
+- Jobs persistentes en Redis (sobreviven reinicios)
+- Reintentos automáticos si falla
+- Monitoreo con dashboard web
+- Escalable (múltiples workers)
+
+## Seguridad
+
+- **Passwords**: Hasheados con BCrypt
+- **Tokens**: JWT firmados con HS256
+- **Autenticación**: Bearer token en header `Authorization`
+
 ## Documentación de la API
 
 La especificación OpenAPI está disponible en `/openapi.yaml`
@@ -140,7 +221,12 @@ La especificación OpenAPI está disponible en `/openapi.yaml`
 - [Cuba](https://www.rubydoc.info/gems/cuba)
 - [Rack-test](https://github.com/rack/rack-test)
 - [Rack::Deflater](https://thoughtbot.com/blog/content-compression-with-rack-deflater)
+- [JWT Ruby Gem](https://github.com/jwt/ruby-jwt)
+- [BCrypt Ruby](https://github.com/bcrypt-ruby/bcrypt-ruby)
+- [Sidekiq](https://github.com/sidekiq/sidekiq)
 
-## Links y documentación usada
+## Notas
 
-Formas de seguir mejorando la API: Yo utilice pstore para el almacenamiento de los productos, una forma mas sencilla ya que se permitia almacenamiento en memoria podria haber sido con arrays o hashes (pero se habria perdido la persistencia). Otra cosa, la creacion asincronica de productos es muy simple, si esto se quisiera llevar a un desarrollo mas complejo se podria usar sidekiq, pero me parecio una consigna muy simple como para implementar sidekiq.
+- Se utiliza PStore para el almacenamiento persistente de productos y usuarios
+- La creación de productos es asíncrona usando Sidekiq con Redis
+- El delay de 5 segundos es configurable en el job

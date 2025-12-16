@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+require 'bcrypt'
 require_relative 'spec_helper'
 
 RSpec.describe 'Auth API' do
   before(:each) do
-    clear_tokens!
+    create_user
   end
 
   describe 'POST /auth' do
@@ -12,7 +13,7 @@ RSpec.describe 'Auth API' do
       it 'returns a token' do
         response = mock_request.post(
           '/auth',
-          input: JSON.generate({ username: ENV['USERNAME'], password: ENV['PASSWORD'] }),
+          input: JSON.generate({ username: 'admin', password: 'fudo' }),
           'CONTENT_TYPE' => 'application/json'
         )
 
@@ -21,8 +22,6 @@ RSpec.describe 'Auth API' do
 
         body = JSON.parse(response.body)
         expect(body).to have_key('token')
-        expect(body['token'].length).to eq(36)
-        expect(body['token']).to match(/\A[a-f0-9-]{36}\z/)
       end
     end
 
@@ -50,7 +49,7 @@ RSpec.describe 'Auth API' do
           'CONTENT_TYPE' => 'application/json'
         )
 
-        expect(response.status).to eq(401)
+        expect(response.status).to eq(400)
       end
     end
   end
