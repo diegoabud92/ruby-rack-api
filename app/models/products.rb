@@ -6,14 +6,13 @@ require_relative './base'
 class Product < Base
   attr_accessor :id, :name, :user_id
 
-  def initialize(id: nil, name: nil, user_id: nil)
+  def initialize(id: nil, name: nil)
     @id = id
     @name = name
-    @user_id = user_id
   end
 
   def to_h
-    { id: @id, name: @name, user_id: @user_id }
+    { id: @id, name: @name }
   end
 
   def to_json(*args)

@@ -45,13 +45,15 @@ class ProductsController < BaseController
       return
     end
     id = Product.next_available_id
-    Thread.new do
-      sleep 5
-      product = Product.new(id: id, name: payload['name'], user_id: current_user_id)
-      product.save
+    product = CreateProductJob.perform_in(5, id, payload['name'])
+    if product
+      @res.status = 201
+      @res.headers['Content-Type'] = 'application/json'
+      @res.write JSON.generate({ message: "Producto creado asincronamente, para visualizar el producto use el endpoint GET /products/#{id}" })
+    else
+      @res.status = 500
+      @res.headers['Content-Type'] = 'application/json'
+      @res.write JSON.generate({ error: 'Error al crear el producto' })
     end
-    @res.status = 201
-    @res.headers['Content-Type'] = 'application/json'
-    @res.write JSON.generate({ message: "Producto creado asincronamente, para visualizar el producto use el endpoint GET /products/#{id}" })
   end
 end

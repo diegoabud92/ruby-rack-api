@@ -5,8 +5,10 @@ require 'dotenv/load'
 require 'json'
 require 'jwt'
 require 'pry-byebug'
+require 'sidekiq'
 
 # Load models and controllers
+require './app/jobs/create_product_job'
 require './app/lib/jwt_auth'
 require './app/models/base'
 require './app/models/products'

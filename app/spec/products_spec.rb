@@ -5,6 +5,10 @@ require_relative 'spec_helper'
 RSpec.describe 'Products API' do
   let(:token) { get_auth_token }
 
+  before(:each) do
+    create_user
+  end
+
   describe 'GET /products' do
     context 'with valid token' do
       it 'returns a list of products' do
@@ -31,7 +35,10 @@ RSpec.describe 'Products API' do
   describe 'POST /products' do
     context 'with valid token and name' do
       it 'creates a product asynchronously' do
-        allow(Thread).to receive(:new).and_yield
+        allow(CreateProductJob).to receive(:perform_in) do |_delay, id, name|
+          CreateProductJob.new.perform(id, name)
+        end
+
         token = get_auth_token
         response = mock_request.post(
           '/products',

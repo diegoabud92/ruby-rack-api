@@ -1,8 +1,14 @@
 openapi: 3.0.3
 info:
   title: Ruby Rack API
-  description: API REST para gestión de productos y usuarios usando Ruby, Rack y Cuba con autenticación JWT
-  version: 2.0.0
+  description: |
+    API REST para gestión de productos y usuarios usando Ruby, Rack y Cuba.
+    
+    **Características:**
+    - Autenticación JWT
+    - Procesamiento asíncrono con Sidekiq
+    - Compresión gzip
+  version: 2.1.0
   contact:
     name: API Support
 
@@ -195,7 +201,13 @@ paths:
 
     post:
       summary: Crear producto (asíncrono)
-      description: Crea un producto de forma asíncrona (demora 5 segundos). El producto se asocia al usuario autenticado.
+      description: |
+        Crea un producto de forma asíncrona usando Sidekiq.
+        
+        El endpoint responde inmediatamente con el ID asignado, y el producto
+        se crea en background después de un delay de 5 segundos.
+        
+        El producto se asocia automáticamente al usuario autenticado.
       tags:
         - Productos
       security:
@@ -208,7 +220,7 @@ paths:
               $ref: '#/components/schemas/CreateProductRequest'
       responses:
         '201':
-          description: Producto en proceso de creación
+          description: Producto encolado para creación
           content:
             application/json:
               schema:
