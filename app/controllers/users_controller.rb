@@ -8,23 +8,13 @@ class UsersController < BaseController
   # POST /users
   #
   def create
-    @req.body.rewind
-    payload = JSON.parse(@req.body.read)
-    unless payload['username'] && payload['password']
-      @res.status = 400
-      @res.headers['Content-Type'] = 'application/json'
-      @res.write JSON.generate({ error: 'Username y password son obligatorios' })
-      return
-    end
+    payload = require_params(:username, :password)
+    return unless payload
+
     id = User.next_available_id
     hashed_password = BCrypt::Password.create(payload['password'])
-    Thread.new do
-      sleep 5
-      user = User.new(id: id, username: payload['username'], password: hashed_password)
-      user.save
-    end
-    @res.status = 201
-    @res.headers['Content-Type'] = 'application/json'
-    @res.write JSON.generate({ message: "Usuario creado asincrono correctamente, id: #{id}, username: #{payload['username']}" })
+    user = User.new(id: id, username: payload['username'], password: hashed_password)
+    user.save
+    json_response({ message: "Usuario creado correctamente, id: #{id}, username: #{payload['username']}" }, status: 201)
   end
 end

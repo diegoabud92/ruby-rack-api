@@ -4,7 +4,7 @@ require 'pstore'
 
 # Base model for all models
 class Base
-  DB_FILE = File.expand_path('../../db.pstore', __dir__)
+  DB_FILE = ENV.fetch('DB_FILE') { File.expand_path('../../db.pstore', __dir__) }
 
   # Class-level methods for database operations.
   # Extended into Base to provide class methods like find, all, save, etc.

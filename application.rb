@@ -4,7 +4,6 @@ require 'cuba'
 require 'dotenv/load'
 require 'json'
 require 'jwt'
-require 'pry-byebug'
 require 'sidekiq'
 
 # Load models and controllers
@@ -16,6 +15,7 @@ require './app/models/users'
 require './app/controllers/base_controller'
 require './app/controllers/products_controller'
 require './app/controllers/users_controller'
+require './app/controllers/auth_controller'
 
 # Routes definition for the API using Cuba
 Cuba.define do
@@ -31,22 +31,8 @@ Cuba.define do
   # POST /auth
   on 'auth' do
     on post do
-      req.body.rewind
-      datos = JSON.parse(req.body.read)
-      if !datos['username'] || !datos['password']
-        res.status = 400
-        res.headers['Content-Type'] = 'application/json'
-        res.write JSON.generate({ error: 'Bad Request' })
-      elsif (user = User.find_by_username(datos['username'])) &&
-            BCrypt::Password.new(user.password) == datos['password']
-        jwt_token = JwtAuth.encode({ user_id: user.id, username: user.username })
-        res.headers['Content-Type'] = 'application/json'
-        res.write JSON.generate({ token: jwt_token })
-      else
-        res.status = 401
-        res.headers['Content-Type'] = 'application/json'
-        res.write JSON.generate({ error: 'Unauthorized' })
-      end
+      controller = AuthController.new(req, res)
+      controller.create
     end
   end
 
@@ -91,9 +77,7 @@ Cuba.define do
 
   # 404 Not Found - si ninguna ruta matcheó
   on default do
-    res.status = 404
-    res.headers['Content-Type'] = 'application/json'
-    res.write JSON.generate({ error: 'Not Found' })
+    error_response('Not Found', status: 404)
   end
 
   # TODO: Implement put and delete routes for products

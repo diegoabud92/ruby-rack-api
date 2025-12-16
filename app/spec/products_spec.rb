@@ -74,7 +74,7 @@ RSpec.describe 'Products API' do
         expect(response.status).to eq(400)
 
         body = JSON.parse(response.body)
-        expect(body['error']).to eq('Nombre del producto es obligatorio')
+        expect(body['error']).to eq('Campos requeridos: name')
       end
     end
 

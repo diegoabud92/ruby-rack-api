@@ -37,7 +37,7 @@ RSpec.describe 'Auth API' do
         expect(response['Content-Type']).to eq('application/json')
 
         body = JSON.parse(response.body)
-        expect(body['error']).to eq('Unauthorized')
+        expect(body['error']).to eq('Credenciales inválidas')
       end
     end
 
